@@ -19,6 +19,11 @@
  */
 
 @theme inline {
+  --font-sans: "Cairo", system-ui, sans-serif;
+  --font-display: "Nunito", "Cairo", sans-serif;
+  --color-primary-soft: var(--primary-soft);
+  --color-gold: var(--gold);
+  --shadow-card: var(--shadow-card);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
