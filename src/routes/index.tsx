@@ -147,15 +147,15 @@ function App() {
       <main className="mr-[86px] md:mr-[275px]">
         {screen.kind === "home" && (
           <>
-            <section className="relative overflow-hidden px-[6%] py-12">
+            <section className="relative overflow-hidden bg-gradient-to-l from-card to-primary-soft px-[6%] py-12">
               <img
                 src={heroAsset.url}
                 alt="علم إسبانيا يرفرف"
                 width={1920}
                 height={1080}
-                className="pointer-events-none absolute inset-y-0 left-0 h-full w-[62%] object-cover object-left opacity-90 [mask-image:linear-gradient(to_right,transparent,black_45%)]"
+                className="pointer-events-none absolute -top-8 left-0 hidden h-[115%] w-[46%] object-cover object-left opacity-95 [mask-image:linear-gradient(to_right,transparent,black_38%)] lg:block"
               />
-              <div className="relative">
+              <div className="relative text-right">
                 <h2 className="font-display text-4xl font-extrabold" dir="ltr">
                   ¡Hola! 👋
                 </h2>
@@ -164,7 +164,7 @@ function App() {
                 </h2>
                 <p className="mt-2 text-muted-foreground">تعلم الإسبانية بطريقة سهلة، عملية وعصرية.</p>
                 <p className="text-muted-foreground">🇪🇸 Español Latino • 🇸🇦 ترجمة عربية • 🔊 نطق صوتي</p>
-                <div className="mt-6 grid max-w-[820px] grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="mt-6 ml-auto grid max-w-[820px] grid-cols-2 gap-3 lg:grid-cols-4">
                   {[
                     ["210", "كلمة عملية"],
                     ["50", "جملة مهمة"],
