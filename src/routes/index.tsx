@@ -80,6 +80,97 @@ function SectionTitle({ title, sub }: { title: string; sub: string }) {
   );
 }
 
+function DailyCards() {
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      {[
+        ["Palabra del Día", "Gracias", "شكرا"],
+        ["Frase del Día", "¿Cómo estás?", "كيف حالك؟"],
+        ["Número del Día", "21", "واحد وعشرون"],
+      ].map(([t, es, ar]) => (
+        <div key={t} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+          <h4 className="font-extrabold text-primary">{t}</h4>
+          <div className="mt-2 flex items-center gap-2" dir="ltr">
+            <span className="font-display text-2xl font-extrabold">{es}</span>
+            <button
+              type="button"
+              aria-label={`استمع إلى ${es}`}
+              onClick={() => speakText(es as string)}
+              className="grid h-9 w-9 place-items-center rounded-full bg-primary-soft text-primary"
+            >
+              🔊
+            </button>
+          </div>
+          <div className="mt-1">{ar}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+type Progress = ReturnType<typeof useProgress>;
+
+function ProgressPanel({ progress }: { progress: Progress }) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <div className="flex flex-col items-center rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+        <img
+          src={trophyAsset.url}
+          alt="كأس التقدم الذهبي"
+          width={1024}
+          height={1024}
+          loading="lazy"
+          className={`h-36 w-36 object-contain transition-all ${
+            progress.goalDone ? "drop-shadow-[0_10px_25px_oklch(0.83_0.16_85/0.6)]" : "opacity-40 grayscale"
+          }`}
+        />
+        {progress.goalDone ? (
+          <p className="mt-3 font-extrabold text-primary">🏆 أحسنت! أنجزت هدف اليوم</p>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">أكمل هدف اليوم لتحصل على الكأس الذهبي</p>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
+        <h3 className="text-xl font-extrabold">هدف اليوم 🎯</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {DAILY_GOAL} إجراء: استمع 🔊 للكلمات وأجب في الاختبار 📝
+        </p>
+        <div className="mt-4 font-display text-5xl font-extrabold text-primary">{progress.percent}%</div>
+        <div className="mt-3 h-3 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress.percent}%` }} />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {progress.todayActions}/{DAILY_GOAL} اليوم • 🔊 {progress.today.listens} استماع • 📝 {progress.today.quiz}{" "}
+          اختبار
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
+        <h3 className="text-xl font-extrabold">أيام الدراسة 📅</h3>
+        <div className="mt-4 grid grid-cols-2 gap-3 text-center">
+          <div className="rounded-xl bg-primary-soft p-4">
+            <b className="font-display text-3xl text-primary">{progress.streak}</b>
+            <small className="block text-muted-foreground">🔥 أيام متتالية</small>
+          </div>
+          <div className="rounded-xl bg-primary-soft p-4">
+            <b className="font-display text-3xl text-primary">{progress.totalDays}</b>
+            <small className="block text-muted-foreground">📆 مجموع الأيام</small>
+          </div>
+          <div className="rounded-xl bg-primary-soft p-4">
+            <b className="font-display text-3xl text-primary">{progress.totalListens}</b>
+            <small className="block text-muted-foreground">🔊 استماع</small>
+          </div>
+          <div className="rounded-xl bg-primary-soft p-4">
+            <b className="font-display text-3xl text-primary">{progress.totalQuiz}</b>
+            <small className="block text-muted-foreground">📝 إجابات</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [screen, setScreen] = useState<Screen>({ kind: "home" });
   const [search, setSearch] = useState("");
@@ -210,29 +301,8 @@ function App() {
                 ))}
               </div>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
-                {[
-                  ["Palabra del Día", "Gracias", "شكرا"],
-                  ["Frase del Día", "¿Cómo estás?", "كيف حالك؟"],
-                  ["Número del Día", "21", "واحد وعشرون"],
-                ].map(([t, es, ar]) => (
-                  <div key={t} className="rounded-2xl border border-border bg-card p-5 shadow-card">
-                    <h4 className="font-extrabold text-primary">{t}</h4>
-                    <div className="mt-2 flex items-center gap-2" dir="ltr">
-                      <span className="font-display text-2xl font-extrabold">{es}</span>
-                      <button
-                        type="button"
-                        aria-label={`استمع إلى ${es}`}
-                        onClick={() => speakText(es as string)}
-                        className="grid h-9 w-9 place-items-center rounded-full bg-primary-soft text-primary"
-                      >
-                        🔊
-                      </button>
-                    </div>
-                    <div className="mt-1">{ar}</div>
-                  </div>
-                ))}
-              </div>
+              <SectionTitle title="📊 تقدمي" sub="تقدم حقيقي يُحسب من نشاطك اليومي" />
+              <ProgressPanel progress={progress} />
             </section>
           </>
         )}
