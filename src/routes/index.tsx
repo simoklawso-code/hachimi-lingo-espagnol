@@ -301,29 +301,8 @@ function App() {
                 ))}
               </div>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
-                {[
-                  ["Palabra del Día", "Gracias", "شكرا"],
-                  ["Frase del Día", "¿Cómo estás?", "كيف حالك؟"],
-                  ["Número del Día", "21", "واحد وعشرون"],
-                ].map(([t, es, ar]) => (
-                  <div key={t} className="rounded-2xl border border-border bg-card p-5 shadow-card">
-                    <h4 className="font-extrabold text-primary">{t}</h4>
-                    <div className="mt-2 flex items-center gap-2" dir="ltr">
-                      <span className="font-display text-2xl font-extrabold">{es}</span>
-                      <button
-                        type="button"
-                        aria-label={`استمع إلى ${es}`}
-                        onClick={() => speakText(es as string)}
-                        className="grid h-9 w-9 place-items-center rounded-full bg-primary-soft text-primary"
-                      >
-                        🔊
-                      </button>
-                    </div>
-                    <div className="mt-1">{ar}</div>
-                  </div>
-                ))}
-              </div>
+              <SectionTitle title="📊 تقدمي" sub="تقدم حقيقي يُحسب من نشاطك اليومي" />
+              <ProgressPanel progress={progress} />
             </section>
           </>
         )}
