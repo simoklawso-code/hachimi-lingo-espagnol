@@ -164,7 +164,7 @@ function App() {
                 </h2>
                 <p className="mt-2 text-muted-foreground">تعلم الإسبانية بطريقة سهلة، عملية وعصرية.</p>
                 <p className="text-muted-foreground">🇪🇸 Español Latino • 🇸🇦 ترجمة عربية • 🔊 نطق صوتي</p>
-                <div className="mt-6 grid max-w-[820px] grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="mt-6 ml-auto grid max-w-[820px] grid-cols-2 gap-3 lg:grid-cols-4">
                   {[
                     ["210", "كلمة عملية"],
                     ["50", "جملة مهمة"],
