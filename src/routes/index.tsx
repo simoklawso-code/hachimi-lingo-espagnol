@@ -340,13 +340,69 @@ function App() {
 
         {screen.kind === "progress" && (
           <section className="px-[5%] py-6">
-            <SectionTitle title="📊 تقدمي" sub="خطة بسيطة للتعلم اليومي" />
-            <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
-              <h3 className="text-xl font-extrabold">هدف اليوم 🎯</h3>
-              <p className="mt-2 text-muted-foreground">
-                10 كلمات + 5 جمل + 5 دقائق استماع. كرر كل كلمة بصوتك بعد سماعها.
-              </p>
-              <div className="mt-4 font-display text-5xl font-extrabold text-primary">0%</div>
+            <SectionTitle title="📊 تقدمي" sub="تقدم حقيقي يُحسب من نشاطك اليومي" />
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="flex flex-col items-center rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+                <img
+                  src={trophyAsset.url}
+                  alt="كأس التقدم الذهبي"
+                  width={1024}
+                  height={1024}
+                  loading="lazy"
+                  className={`h-36 w-36 object-contain transition-all ${
+                    progress.goalDone ? "drop-shadow-[0_10px_25px_oklch(0.83_0.16_85/0.6)]" : "opacity-40 grayscale"
+                  }`}
+                />
+                {progress.goalDone ? (
+                  <p className="mt-3 font-extrabold text-primary">🏆 أحسنت! أنجزت هدف اليوم</p>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    أكمل هدف اليوم لتحصل على الكأس الذهبي
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
+                <h3 className="text-xl font-extrabold">هدف اليوم 🎯</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {DAILY_GOAL} إجراء: استمع 🔊 للكلمات وأجب في الاختبار 📝
+                </p>
+                <div className="mt-4 font-display text-5xl font-extrabold text-primary">
+                  {progress.percent}%
+                </div>
+                <div className="mt-3 h-3 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${progress.percent}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {progress.todayActions}/{DAILY_GOAL} اليوم • 🔊 {progress.today.listens} استماع • 📝{" "}
+                  {progress.today.quiz} اختبار
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
+                <h3 className="text-xl font-extrabold">أيام الدراسة 📅</h3>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-center">
+                  <div className="rounded-xl bg-primary-soft p-4">
+                    <b className="font-display text-3xl text-primary">{progress.streak}</b>
+                    <small className="block text-muted-foreground">🔥 أيام متتالية</small>
+                  </div>
+                  <div className="rounded-xl bg-primary-soft p-4">
+                    <b className="font-display text-3xl text-primary">{progress.totalDays}</b>
+                    <small className="block text-muted-foreground">📆 مجموع الأيام</small>
+                  </div>
+                  <div className="rounded-xl bg-primary-soft p-4">
+                    <b className="font-display text-3xl text-primary">{progress.totalListens}</b>
+                    <small className="block text-muted-foreground">🔊 استماع</small>
+                  </div>
+                  <div className="rounded-xl bg-primary-soft p-4">
+                    <b className="font-display text-3xl text-primary">{progress.totalQuiz}</b>
+                    <small className="block text-muted-foreground">📝 إجابات</small>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         )}
