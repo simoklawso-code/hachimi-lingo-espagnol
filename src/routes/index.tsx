@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import logoAsset from "@/assets/logo.png.asset.json";
 import heroAsset from "@/assets/hero.jpg.asset.json";
+import trophyAsset from "@/assets/trophy.png.asset.json";
 import { sections, phrases, numbers, icons, type Item } from "@/data/lingo";
+import { useProgress, DAILY_GOAL } from "@/hooks/use-progress";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -25,8 +27,10 @@ export const Route = createFileRoute("/")({
   component: App,
 });
 
+let onSpeak: (() => void) | null = null;
 function speakText(text: string) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  onSpeak?.();
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "es-MX";
