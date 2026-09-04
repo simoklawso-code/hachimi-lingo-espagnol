@@ -1,0 +1,14 @@
+{
+  "name": "Espanol Lingo — تعلم الإسبانية بالعربية",
+  "short_name": "Espanol Lingo",
+  "description": "تعلم الإسبانية اللاتينية بالعربية: كلمات، جمل، قواعد، قصص ونطق صوتي.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#c62828",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
