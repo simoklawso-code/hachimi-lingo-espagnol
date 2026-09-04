@@ -1,10 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import logoAsset from "@/assets/logo.png.asset.json";
 import heroAsset from "@/assets/hero.jpg.asset.json";
 import trophyAsset from "@/assets/trophy.png.asset.json";
 import { sections, phrases, numbers, icons, type Item } from "@/data/lingo";
-import { useProgress, DAILY_GOAL } from "@/hooks/use-progress";
+import { themes, verbs, stories } from "@/data/extra";
+import {
+  useProgress,
+  DAILY_GOAL,
+  MAX_FREEZES,
+  LEVELS,
+  reviewCard,
+  dueCards,
+  useStreakFreeze,
+  setDarkMode,
+  historySeries,
+  type SrsCard,
+} from "@/hooks/use-progress";
+import { useSpeechRecognition, scorePronunciation } from "@/hooks/use-speech-recognition";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,7 +59,15 @@ type Screen =
   | { kind: "numbers" }
   | { kind: "phrases" }
   | { kind: "quiz" }
-  | { kind: "progress" };
+  | { kind: "progress" }
+  | { kind: "themes" }
+  | { kind: "theme"; id: string }
+  | { kind: "grammar" }
+  | { kind: "stories" }
+  | { kind: "story"; id: string }
+  | { kind: "review" }
+  | { kind: "speak" }
+  | { kind: "badges" };
 
 function WordCard({ item, num }: { item: Item; num?: number }) {
   return (
@@ -171,6 +192,353 @@ function ProgressPanel({ progress }: { progress: Progress }) {
   );
 }
 
+
+function LevelBadge({ level }: { level: { id: string; label: string } }) {
+  return (
+    <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-extrabold text-primary">
+      {level.label}
+    </span>
+  );
+}
+
+function ActivityChart({ history }: { history: Record<string, number> }) {
+  const [range, setRange] = useState<7 | 30>(7);
+  const data = historySeries(history, range);
+  const max = Math.max(1, ...data.map((d) => d.count));
+  return (
+    <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-extrabold">تطور النشاط 📈</h3>
+        <div className="flex gap-1">
+          {[7, 30].map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRange(r as 7 | 30)}
+              className={`rounded-lg px-3 py-1 text-xs font-bold ${
+                range === r ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary"
+              }`}
+            >
+              {r} يوم
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-5 flex h-32 items-end gap-1" dir="ltr">
+        {data.map((d) => (
+          <div key={d.date} className="flex-1" title={`${d.date}: ${d.count}`}>
+            <div
+              className="w-full rounded-t bg-primary transition-all"
+              style={{ height: `${Math.max(3, (d.count / max) * 100)}%`, opacity: d.count ? 1 : 0.25 }}
+            />
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">عدد الأنشطة اليومية خلال آخر {range} يوم</p>
+    </div>
+  );
+}
+
+function PronounceBox({ item }: { item: Item }) {
+  const { supported, listening, listen } = useSpeechRecognition();
+  const [result, setResult] = useState<{ said: string; score: number } | null>(null);
+  return (
+    <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
+      <div className="flex items-center justify-between gap-2" dir="ltr">
+        <span className="font-display text-xl font-extrabold">{item.es}</span>
+        <button
+          type="button"
+          aria-label={`استمع إلى ${item.es}`}
+          onClick={() => speakText(item.es)}
+          className="grid h-9 w-9 place-items-center rounded-full bg-primary-soft text-primary"
+        >
+          🔊
+        </button>
+      </div>
+      <div className="mt-1 font-bold">{item.ar}</div>
+      {supported ? (
+        <button
+          type="button"
+          onClick={() => listen((said) => setResult({ said, score: scorePronunciation(item.es, said) }))}
+          className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+        >
+          {listening ? "🎙️ أتحدث..." : "🎤 كرر الكلمة"}
+        </button>
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">متصفحك لا يدعم التعرف على الصوت</p>
+      )}
+      {result && (
+        <div className="mt-3 text-sm">
+          <div className="font-bold text-primary">{result.score}%</div>
+          <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${result.score}%` }} />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
+            سمعت: {result.said}
+          </p>
+          <p className="mt-1 text-xs font-bold">
+            {result.score >= 80 ? "✅ نطق ممتاز!" : result.score >= 50 ? "🙂 قريب، أعد المحاولة" : "❌ حاول مرة أخرى"}
+          </p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+type QuizMode = "mcq" | "reverse" | "listen" | "match";
+
+function VariedQuiz({ all, onAnswer }: { all: Item[]; onAnswer: () => void }) {
+  const [mode, setMode] = useState<QuizMode>("mcq");
+  const [q, setQ] = useState(() => makeQuiz(all));
+  const [answer, setAnswer] = useState<string | null>(null);
+
+  const next = () => {
+    setQ(makeQuiz(all));
+    setAnswer(null);
+  };
+
+  const correct = mode === "reverse" ? q.word.es : q.word.ar;
+  const options = mode === "reverse" ? q.optionsEs : q.options;
+
+  const modes: { id: QuizMode; label: string }[] = [
+    { id: "mcq", label: "اختيار متعدد" },
+    { id: "reverse", label: "عربي ← إسباني" },
+    { id: "listen", label: "استماع" },
+    { id: "match", label: "توصيل" },
+  ];
+
+  if (mode === "match") {
+    return (
+      <>
+        <QuizModes modes={modes} mode={mode} setMode={(m) => { setMode(m); next(); }} />
+        <MatchQuiz all={all} onAnswer={onAnswer} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <QuizModes modes={modes} mode={mode} setMode={(m) => { setMode(m); next(); }} />
+      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+        {mode === "mcq" && <div>ما معنى الكلمة التالية؟</div>}
+        {mode === "reverse" && <div>ما هي الكلمة بالإسبانية؟</div>}
+        {mode === "listen" && <div>استمع ثم اختر المعنى الصحيح</div>}
+        {mode === "listen" ? (
+          <button
+            type="button"
+            onClick={() => speakText(q.word.es)}
+            className="my-4 rounded-xl bg-primary-soft px-6 py-4 text-3xl text-primary"
+            aria-label="استمع إلى الكلمة"
+          >
+            🔊
+          </button>
+        ) : (
+          <div className="my-4 font-display text-3xl font-extrabold" dir={mode === "reverse" ? "rtl" : "ltr"}>
+            {mode === "reverse" ? q.word.ar : q.word.es}
+          </div>
+        )}
+        <div className="flex flex-wrap justify-center gap-2">
+          {options.map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => {
+                setAnswer(o);
+                onAnswer();
+                reviewCard(q.word.es, q.word.ar, o === correct);
+              }}
+              className={`rounded-xl border border-border px-4 py-2 ${
+                answer
+                  ? o === correct
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card opacity-60"
+                  : "bg-card hover:bg-primary-soft"
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+        {answer && <p className="mt-4 font-bold">{answer === correct ? "✅ صحيح!" : `❌ الجواب: ${correct}`}</p>}
+        <button
+          type="button"
+          onClick={next}
+          className="mt-5 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground"
+        >
+          سؤال جديد 🔄
+        </button>
+      </div>
+    </>
+  );
+}
+
+function QuizModes({
+  modes,
+  mode,
+  setMode,
+}: {
+  modes: { id: QuizMode; label: string }[];
+  mode: QuizMode;
+  setMode: (m: QuizMode) => void;
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap gap-2">
+      {modes.map((m) => (
+        <button
+          key={m.id}
+          type="button"
+          onClick={() => setMode(m.id)}
+          className={`rounded-xl px-4 py-2 text-sm font-bold ${
+            mode === m.id ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary"
+          }`}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function MatchQuiz({ all, onAnswer }: { all: Item[]; onAnswer: () => void }) {
+  const [round, setRound] = useState(0);
+  const pairs = useMemo(() => pickPairs(all, 5), [all, round]);
+  const shuffledAr = useMemo(() => [...pairs].sort(() => Math.random() - 0.5), [pairs]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [done, setDone] = useState<Record<string, boolean>>({});
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+      <p className="mb-4 text-center">وصّل الكلمة الإسبانية بمعناها العربي</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-2">
+          {pairs.map((p) => (
+            <button
+              key={p.es}
+              type="button"
+              dir="ltr"
+              disabled={done[p.es]}
+              onClick={() => setSelected(p.es)}
+              className={`rounded-xl border border-border px-3 py-2 font-bold ${
+                done[p.es] ? "bg-primary text-primary-foreground" : selected === p.es ? "bg-primary-soft" : "bg-card"
+              }`}
+            >
+              {p.es}
+            </button>
+          ))}
+        </div>
+        <div className="grid gap-2">
+          {shuffledAr.map((p) => (
+            <button
+              key={p.ar}
+              type="button"
+              disabled={done[p.es]}
+              onClick={() => {
+                if (!selected) return;
+                const good = selected === p.es;
+                onAnswer();
+                const target = pairs.find((x) => x.es === selected);
+                if (target) reviewCard(target.es, target.ar, good);
+                if (good) setDone((d) => ({ ...d, [p.es]: true }));
+                setSelected(null);
+              }}
+              className={`rounded-xl border border-border px-3 py-2 ${
+                done[p.es] ? "bg-primary text-primary-foreground" : "bg-card"
+              }`}
+            >
+              {p.ar}
+            </button>
+          ))}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setDone({});
+          setSelected(null);
+          setRound((r) => r + 1);
+        }}
+        className="mt-5 w-full rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground"
+      >
+        جولة جديدة 🔄
+      </button>
+    </div>
+  );
+}
+
+function ReviewScreen({ onAnswer }: { onAnswer: () => void }) {
+  const [tick, setTick] = useState(0);
+  const cards = useMemo(() => dueCards(), [tick]);
+  const card: SrsCard | undefined = cards[0];
+  const [shown, setShown] = useState(false);
+
+  if (!card) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-card">
+        <div className="text-5xl">🧠</div>
+        <p className="mt-3 font-extrabold">لا توجد كلمات للمراجعة الآن</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          أجب في الاختبار لإضافة كلمات إلى نظام المراجعة المتباعدة (SRS).
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+      <p className="text-xs text-muted-foreground">متبقٍ اليوم: {cards.length} • المستوى {card.box}/5</p>
+      <div className="my-5 font-display text-4xl font-extrabold" dir="ltr">
+        {card.es}
+      </div>
+      <button
+        type="button"
+        onClick={() => speakText(card.es)}
+        className="rounded-full bg-primary-soft px-4 py-2 text-primary"
+      >
+        🔊 استمع
+      </button>
+      {shown ? (
+        <>
+          <div className="mt-4 text-2xl font-extrabold">{card.ar}</div>
+          <div className="mt-5 flex justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                reviewCard(card.es, card.ar, false);
+                onAnswer();
+                setShown(false);
+                setTick((t) => t + 1);
+              }}
+              className="rounded-xl border border-border bg-card px-4 py-2 font-bold"
+            >
+              ❌ لم أتذكر
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                reviewCard(card.es, card.ar, true);
+                onAnswer();
+                setShown(false);
+                setTick((t) => t + 1);
+              }}
+              className="rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground"
+            >
+              ✅ أتذكرها
+            </button>
+          </div>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShown(true)}
+          className="mt-5 block w-full rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground"
+        >
+          أظهر الترجمة
+        </button>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [screen, setScreen] = useState<Screen>({ kind: "home" });
   const [search, setSearch] = useState("");
@@ -191,12 +559,22 @@ function App() {
     })),
     { label: "الأرقام 1–50", icon: "🔢", screen: { kind: "numbers" } as Screen },
     { label: "50 جملة", icon: "💬", screen: { kind: "phrases" } as Screen },
+    { label: "دروس مواضيعية", icon: "🧳", screen: { kind: "themes" } as Screen },
+    { label: "قواعد سريعة", icon: "📐", screen: { kind: "grammar" } as Screen },
+    { label: "قصص قصيرة", icon: "📖", screen: { kind: "stories" } as Screen },
+    { label: "النطق", icon: "🎤", screen: { kind: "speak" } as Screen },
+    { label: "المراجعة الذكية", icon: "🧠", screen: { kind: "review" } as Screen },
     { label: "اختبار", icon: "📝", screen: { kind: "quiz" } as Screen },
+    { label: "الأوسمة", icon: "🏅", screen: { kind: "badges" } as Screen },
     { label: "تقدمي", icon: "📊", screen: { kind: "progress" } as Screen },
   ];
 
   const isActive = (s: Screen) =>
     s.kind === screen.kind && (s.kind !== "lesson" || (screen.kind === "lesson" && s.index === screen.index));
+
+  useEffect(() => {
+    if (progress.darkMode) document.documentElement.classList.add("dark");
+  }, [progress.darkMode]);
 
   const go = (s: Screen) => {
     setScreen(s);
@@ -427,10 +805,27 @@ function App() {
 function makeQuiz(all: Item[]) {
   const word = all[Math.floor(Math.random() * all.length)]!;
   const options = [word.ar];
+  const optionsEs = [word.es];
   while (options.length < 4) {
-    const z = all[Math.floor(Math.random() * all.length)]!.ar;
-    if (!options.includes(z)) options.push(z);
+    const z = all[Math.floor(Math.random() * all.length)]!;
+    if (!options.includes(z.ar)) options.push(z.ar);
+    if (!optionsEs.includes(z.es)) optionsEs.push(z.es);
+  }
+  while (optionsEs.length < 4) {
+    const z = all[Math.floor(Math.random() * all.length)]!.es;
+    if (!optionsEs.includes(z)) optionsEs.push(z);
   }
   options.sort(() => Math.random() - 0.5);
-  return { word, options };
+  optionsEs.sort(() => Math.random() - 0.5);
+  return { word, options, optionsEs };
 }
+
+function pickPairs(all: Item[], n: number) {
+  const out: Item[] = [];
+  while (out.length < n) {
+    const w = all[Math.floor(Math.random() * all.length)]!;
+    if (!out.some((x) => x.es === w.es)) out.push(w);
+  }
+  return out;
+}
+
