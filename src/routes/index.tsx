@@ -1,10 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import logoAsset from "@/assets/logo.png.asset.json";
 import heroAsset from "@/assets/hero.jpg.asset.json";
 import trophyAsset from "@/assets/trophy.png.asset.json";
 import { sections, phrases, numbers, icons, type Item } from "@/data/lingo";
-import { useProgress, DAILY_GOAL } from "@/hooks/use-progress";
+import { themes, verbs, stories } from "@/data/extra";
+import {
+  useProgress,
+  DAILY_GOAL,
+  MAX_FREEZES,
+  LEVELS,
+  reviewCard,
+  dueCards,
+  useStreakFreeze,
+  setDarkMode,
+  historySeries,
+  type SrsCard,
+} from "@/hooks/use-progress";
+import { useSpeechRecognition, scorePronunciation } from "@/hooks/use-speech-recognition";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,7 +59,15 @@ type Screen =
   | { kind: "numbers" }
   | { kind: "phrases" }
   | { kind: "quiz" }
-  | { kind: "progress" };
+  | { kind: "progress" }
+  | { kind: "themes" }
+  | { kind: "theme"; id: string }
+  | { kind: "grammar" }
+  | { kind: "stories" }
+  | { kind: "story"; id: string }
+  | { kind: "review" }
+  | { kind: "speak" }
+  | { kind: "badges" };
 
 function WordCard({ item, num }: { item: Item; num?: number }) {
   return (
@@ -191,12 +212,22 @@ function App() {
     })),
     { label: "الأرقام 1–50", icon: "🔢", screen: { kind: "numbers" } as Screen },
     { label: "50 جملة", icon: "💬", screen: { kind: "phrases" } as Screen },
+    { label: "دروس مواضيعية", icon: "🧳", screen: { kind: "themes" } as Screen },
+    { label: "قواعد سريعة", icon: "📐", screen: { kind: "grammar" } as Screen },
+    { label: "قصص قصيرة", icon: "📖", screen: { kind: "stories" } as Screen },
+    { label: "النطق", icon: "🎤", screen: { kind: "speak" } as Screen },
+    { label: "المراجعة الذكية", icon: "🧠", screen: { kind: "review" } as Screen },
     { label: "اختبار", icon: "📝", screen: { kind: "quiz" } as Screen },
+    { label: "الأوسمة", icon: "🏅", screen: { kind: "badges" } as Screen },
     { label: "تقدمي", icon: "📊", screen: { kind: "progress" } as Screen },
   ];
 
   const isActive = (s: Screen) =>
     s.kind === screen.kind && (s.kind !== "lesson" || (screen.kind === "lesson" && s.index === screen.index));
+
+  useEffect(() => {
+    if (progress.darkMode) document.documentElement.classList.add("dark");
+  }, [progress.darkMode]);
 
   const go = (s: Screen) => {
     setScreen(s);
