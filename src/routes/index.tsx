@@ -590,17 +590,45 @@ function App() {
     if (progress.darkMode) document.documentElement.classList.add("dark");
   }, [progress.darkMode]);
 
+  // Reminder at the same time the user studied yesterday:
+  // every minute, if current HH:MM matches the stored study time and the user
+  // hasn't studied today yet, show a push notification (once per day).
+  const studyTime = progress.studyTime;
+  const lastReminder = progress.lastReminder;
+  const todayDate = progress.today.date;
+  const todayActions = progress.todayActions;
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+    const tick = () => {
+      if (!studyTime) return;
+      const now = new Date();
+      const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const today = now.toISOString().slice(0, 10);
+      if (hhmm !== studyTime) return;
+      if (lastReminder === today) return;
+      if (todayDate === today && todayActions > 0) return; // already studied today
+      new Notification("Espanol Lingo 🇪🇸", {
+        body: "حان وقت درسك اليومي، نفس وقت الأمس! ¡Vamos a estudiar! 🔥",
+        icon: "/favicon.png",
+      });
+      markReminderShown();
+    };
+    const id = window.setInterval(tick, 30000);
+    tick();
+    return () => window.clearInterval(id);
+  }, [studyTime, lastReminder, todayDate, todayActions]);
+
   const askReminder = async () => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
     const perm = await Notification.requestPermission();
     if (perm !== "granted") return;
-    new Notification("Espanol Lingo 🇪🇸", { body: "حان وقت درس اليوم! ¡Vamos a estudiar!", icon: "/favicon.png" });
-    window.setInterval(
-      () => {
-        new Notification("Espanol Lingo 🇪🇸", { body: "لا تنس درسك اليومي 🔥", icon: "/favicon.png" });
-      },
-      1000 * 60 * 60 * 12,
-    );
+    new Notification("Espanol Lingo 🇪🇸", {
+      body: studyTime
+        ? `سأذكرك كل يوم على الساعة ${studyTime} — نفس وقت دراستك 🔥`
+        : "فعّلت التذكير! سأحفظ وقت دراستك وأذكرك به غداً 🔥",
+      icon: "/favicon.png",
+    });
   };
 
   const go = (s: Screen) => {
