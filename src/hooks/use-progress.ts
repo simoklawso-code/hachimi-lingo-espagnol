@@ -20,6 +20,10 @@ export type ProgressState = {
   correct: number;
   wrong: number;
   darkMode: boolean;
+  /** HH:MM of the day's first study action — used to remind at the same time */
+  studyTime: string | null;
+  /** last date a study-time reminder notification was shown */
+  lastReminder: string | null;
 };
 
 const KEY = "espanol-lingo-progress-v1";
@@ -67,6 +71,8 @@ function empty(): ProgressState {
     correct: 0,
     wrong: 0,
     darkMode: false,
+    studyTime: null,
+    lastReminder: null,
   };
 }
 
@@ -107,7 +113,13 @@ function markDay(t: string) {
 export function recordAction(type: "listen" | "quiz") {
   if (typeof window === "undefined") return;
   const t = todayKey();
-  if (state.today.date !== t) state.today = { date: t, listens: 0, quiz: 0 };
+  if (state.today.date !== t) {
+    // first action of the day — remember the study time for tomorrow's reminder
+    const now = new Date();
+    const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    state.today = { date: t, listens: 0, quiz: 0 };
+    state.studyTime = hhmm;
+  }
   if (type === "listen") {
     state.today.listens += 1;
     state.totalListens += 1;
@@ -156,6 +168,11 @@ export function consumeStreakFreeze() {
   state = { ...state, freezes: state.freezes - 1, freezeUsed: [...state.freezeUsed, yesterday] };
   persist();
   return true;
+}
+
+export function markReminderShown() {
+  state = { ...state, lastReminder: todayKey() };
+  persist();
 }
 
 export function setDarkMode(on: boolean) {
