@@ -683,12 +683,10 @@ function App() {
                 </h2>
                 <p className="mt-2 text-muted-foreground">تعلم الإسبانية بطريقة سهلة، عملية وعصرية.</p>
                 <p className="text-muted-foreground">🇪🇸 Español Latino • 🇸🇦 ترجمة عربية • 🔊 نطق صوتي</p>
-                <div className="mt-6 ml-auto grid max-w-[820px] grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="mt-6 ml-auto grid max-w-[820px] grid-cols-2 gap-3">
                   {[
                     ["210", "كلمة عملية"],
                     ["50", "جملة مهمة"],
-                    ["50", "رقم من 1 إلى 50"],
-                    ["7", "أقسام"],
                   ].map(([n, l]) => (
                     <div key={l} className="rounded-2xl border border-border bg-card/90 p-4 backdrop-blur">
                       <b className="font-display text-2xl text-primary">{n}</b>
