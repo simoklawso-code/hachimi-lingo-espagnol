@@ -71,6 +71,8 @@ function empty(): ProgressState {
     correct: 0,
     wrong: 0,
     darkMode: false,
+    studyTime: null,
+    lastReminder: null,
   };
 }
 
