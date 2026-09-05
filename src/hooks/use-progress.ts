@@ -20,6 +20,10 @@ export type ProgressState = {
   correct: number;
   wrong: number;
   darkMode: boolean;
+  /** HH:MM of the day's first study action — used to remind at the same time */
+  studyTime: string | null;
+  /** last date a study-time reminder notification was shown */
+  lastReminder: string | null;
 };
 
 const KEY = "espanol-lingo-progress-v1";
