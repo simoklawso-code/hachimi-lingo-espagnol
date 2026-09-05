@@ -148,7 +148,7 @@ export function dueCards(): SrsCard[] {
   return Object.values(state.srs).filter((c) => c.due <= t);
 }
 
-export function useStreakFreeze() {
+export function consumeStreakFreeze() {
   if (typeof window === "undefined") return false;
   if (state.freezes <= 0) return false;
   const yesterday = addDays(todayKey(), -1);
