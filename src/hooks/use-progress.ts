@@ -170,6 +170,11 @@ export function consumeStreakFreeze() {
   return true;
 }
 
+export function markReminderShown() {
+  state = { ...state, lastReminder: todayKey() };
+  persist();
+}
+
 export function setDarkMode(on: boolean) {
   state = { ...state, darkMode: on };
   if (typeof document !== "undefined") document.documentElement.classList.toggle("dark", on);
