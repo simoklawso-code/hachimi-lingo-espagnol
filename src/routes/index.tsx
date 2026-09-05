@@ -132,6 +132,7 @@ function DailyCards() {
 type Progress = ReturnType<typeof useProgress>;
 
 function ProgressPanel({ progress }: { progress: Progress }) {
+  const [freezeMsg, setFreezeMsg] = useState<string | null>(null);
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="flex flex-col items-center rounded-2xl border border-border bg-card p-8 text-center shadow-card">
@@ -168,7 +169,10 @@ function ProgressPanel({ progress }: { progress: Progress }) {
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
-        <h3 className="text-xl font-extrabold">أيام الدراسة 📅</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-xl font-extrabold">أيام الدراسة 📅</h3>
+          <LevelBadge level={progress.level} />
+        </div>
         <div className="mt-4 grid grid-cols-2 gap-3 text-center">
           <div className="rounded-xl bg-primary-soft p-4">
             <b className="font-display text-3xl text-primary">{progress.streak}</b>
@@ -187,6 +191,17 @@ function ProgressPanel({ progress }: { progress: Progress }) {
             <small className="block text-muted-foreground">📝 إجابات</small>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            const ok = useStreakFreeze();
+            setFreezeMsg(ok ? "🧊 تم إنقاذ سلسلتك ليوم أمس!" : "لا يمكن استعمال يوم الراحة الآن");
+          }}
+          className="mt-4 w-full rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold"
+        >
+          🧊 يوم راحة — حماية السلسلة ({progress.freezes}/{MAX_FREEZES})
+        </button>
+        {freezeMsg && <p className="mt-2 text-center text-xs text-muted-foreground">{freezeMsg}</p>}
       </div>
     </div>
   );
@@ -710,6 +725,9 @@ function App() {
 
               <SectionTitle title="📊 تقدمي" sub="تقدم حقيقي يُحسب من نشاطك اليومي" />
               <ProgressPanel progress={progress} />
+              <div className="mt-4">
+                <ActivityChart history={progress.history} />
+              </div>
             </section>
           </>
         )}
