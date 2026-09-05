@@ -545,8 +545,6 @@ function App() {
   const [phraseSearch, setPhraseSearch] = useState("");
 
   const allItems = useMemo(() => sections.flatMap((s) => s.items), []);
-  const [quiz, setQuiz] = useState(() => makeQuiz(allItems));
-  const [answer, setAnswer] = useState<string | null>(null);
   const progress = useProgress();
   onSpeak = progress.recordListen;
 
@@ -575,6 +573,19 @@ function App() {
   useEffect(() => {
     if (progress.darkMode) document.documentElement.classList.add("dark");
   }, [progress.darkMode]);
+
+  const askReminder = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return;
+    new Notification("Espanol Lingo 🇪🇸", { body: "حان وقت درس اليوم! ¡Vamos a estudiar!", icon: "/favicon.png" });
+    window.setInterval(
+      () => {
+        new Notification("Espanol Lingo 🇪🇸", { body: "لا تنس درسك اليومي 🔥", icon: "/favicon.png" });
+      },
+      1000 * 60 * 60 * 12,
+    );
+  };
 
   const go = (s: Screen) => {
     setScreen(s);
@@ -617,6 +628,24 @@ function App() {
             </button>
           ))}
         </nav>
+        <div className="mt-3 grid gap-2 border-t border-border pt-3">
+          <button
+            type="button"
+            onClick={() => setDarkMode(!progress.darkMode)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl p-3 text-sm hover:bg-primary-soft hover:text-primary md:justify-start"
+          >
+            <span>{progress.darkMode ? "☀️" : "🌙"}</span>
+            <span className="hidden md:inline">{progress.darkMode ? "الوضع الفاتح" : "الوضع الليلي"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={askReminder}
+            className="flex w-full items-center justify-center gap-2 rounded-xl p-3 text-sm hover:bg-primary-soft hover:text-primary md:justify-start"
+          >
+            <span>🔔</span>
+            <span className="hidden md:inline">تذكير يومي</span>
+          </button>
+        </div>
       </aside>
 
       <main className="mr-[86px] md:mr-[275px]">
@@ -748,41 +777,8 @@ function App() {
 
         {screen.kind === "quiz" && (
           <section className="px-[5%] py-6">
-            <SectionTitle title="📝 اختبار سريع" sub="اختبر فهمك" />
-            <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
-              <div>ما معنى الكلمة التالية؟</div>
-              <div className="my-4 font-display text-3xl font-extrabold" dir="ltr">
-                {quiz.word.es}
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {quiz.options.map((o) => (
-                  <button
-                    key={o}
-                    type="button"
-                    onClick={() => {
-                      setAnswer(o);
-                      progress.recordQuiz();
-                    }}
-                    className="rounded-xl border border-border bg-card px-4 py-2 hover:bg-primary-soft"
-                  >
-                    {o}
-                  </button>
-                ))}
-              </div>
-              {answer && (
-                <p className="mt-4 font-bold">{answer === quiz.word.ar ? "✅ صحيح!" : "❌ حاول مرة أخرى"}</p>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setQuiz(makeQuiz(allItems));
-                  setAnswer(null);
-                }}
-                className="mt-5 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground"
-              >
-                سؤال جديد 🔄
-              </button>
-            </div>
+            <SectionTitle title="📝 اختبارات متنوعة" sub="اختيار متعدد • عربي ← إسباني • استماع • توصيل" />
+            <VariedQuiz all={allItems} onAnswer={progress.recordQuiz} />
           </section>
         )}
 
@@ -790,6 +786,203 @@ function App() {
           <section className="px-[5%] py-6">
             <SectionTitle title="🌟 اليومية" sub="كلمة، جملة ورقم يوميين" />
             <DailyCards />
+          </section>
+        )}
+
+        {screen.kind === "themes" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle title="🧳 دروس مواضيعية" sub="السفر • المطعم • الفندق • العمل • العائلة" />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {themes.map((t) => (
+                <div key={t.id} className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-card">
+                  <div className="text-3xl">{t.icon}</div>
+                  <h4 className="mt-2 font-extrabold">
+                    {t.title} <span className="text-muted-foreground">• {t.es}</span>
+                  </h4>
+                  <p className="mb-3 flex-1 text-xs text-muted-foreground">
+                    {t.items.length} كلمة وجملة • المستوى {t.level}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => go({ kind: "theme", id: t.id })}
+                    className="self-start rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+                  >
+                    ابدأ ←
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {screen.kind === "theme" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle
+              title={`${themes.find((t) => t.id === screen.id)?.icon ?? ""} ${themes.find((t) => t.id === screen.id)?.title ?? ""}`}
+              sub="español latino • ترجمة عربية • نطق • صوت"
+            />
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {(themes.find((t) => t.id === screen.id)?.items ?? []).map((x) => (
+                <WordCard key={x.es} item={x} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {screen.kind === "grammar" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle title="📐 قواعد سريعة" sub="أهم الأفعال: ser / estar / tener / ir / hacer / querer" />
+            <div className="grid gap-4 lg:grid-cols-2">
+              {verbs.map((v) => (
+                <div key={v.es} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-display text-2xl font-extrabold text-primary" dir="ltr">
+                      {v.es}
+                    </h4>
+                    <span className="font-bold">{v.ar}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{v.note}</p>
+                  <div className="mt-3 grid gap-1">
+                    {v.forms.map((f) => (
+                      <div key={f.p} className="flex items-center justify-between rounded-xl bg-primary-soft px-3 py-2 text-sm">
+                        <span dir="ltr" className="font-bold">
+                          {f.p} — {f.es}
+                        </span>
+                        <span className="flex items-center gap-2">
+                          {f.ar}
+                          <button
+                            type="button"
+                            aria-label={`استمع إلى ${f.es}`}
+                            onClick={() => speakText(`${f.p} ${f.es}`)}
+                            className="text-primary"
+                          >
+                            🔊
+                          </button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {screen.kind === "stories" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle title="📖 قصص قصيرة" sub="قصص بالإسبانية اللاتينية مع ترجمة عربية وصوت" />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {stories.map((st) => (
+                <div key={st.id} className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-card">
+                  <h4 className="font-display text-xl font-extrabold" dir="ltr">
+                    {st.title}
+                  </h4>
+                  <p className="mb-3 flex-1 text-sm">
+                    {st.ar} • المستوى {st.level}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => go({ kind: "story", id: st.id })}
+                    className="self-start rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+                  >
+                    اقرأ ←
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {screen.kind === "story" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle
+              title={stories.find((x) => x.id === screen.id)?.title ?? ""}
+              sub={stories.find((x) => x.id === screen.id)?.ar ?? ""}
+            />
+            <button
+              type="button"
+              onClick={() => speakText((stories.find((x) => x.id === screen.id)?.lines ?? []).map((l) => l.es).join(" "))}
+              className="mb-4 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+            >
+              🔊 استمع للقصة كاملة
+            </button>
+            <div className="grid gap-3">
+              {(stories.find((x) => x.id === screen.id)?.lines ?? []).map((l) => (
+                <div key={l.es} className="rounded-2xl border border-border bg-card p-4 shadow-card">
+                  <div className="flex items-center justify-between gap-2" dir="ltr">
+                    <span className="font-display text-lg font-bold">{l.es}</span>
+                    <button
+                      type="button"
+                      aria-label={`استمع إلى ${l.es}`}
+                      onClick={() => speakText(l.es)}
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary-soft text-primary"
+                    >
+                      🔊
+                    </button>
+                  </div>
+                  <div className="mt-1">{l.ar}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {screen.kind === "speak" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle title="🎤 تدريب النطق" sub="كرر الكلمة والموقع يقيّم نطقك" />
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {allItems.slice(0, 24).map((x) => (
+                <PronounceBox key={x.es} item={x} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {screen.kind === "review" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle title="🧠 المراجعة المتباعدة" sub="راجع الكلمات في الوقت المناسب حتى لا تنساها" />
+            <ReviewScreen onAnswer={progress.recordQuiz} />
+          </section>
+        )}
+
+        {screen.kind === "badges" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle title="🏅 المستوى والأوسمة" sub="تقدم، نقاط ومكافآت" />
+            <div className="mb-4 rounded-2xl border border-border bg-card p-6 shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <LevelBadge level={progress.level} />
+                <span className="font-display text-2xl font-extrabold text-primary">{progress.xp} XP</span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {LEVELS.map((l) => (
+                  <span
+                    key={l.id}
+                    className={`rounded-xl px-3 py-2 text-xs font-bold ${
+                      progress.xp >= l.min ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {l.label} • {l.min} XP
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {progress.badges.map((b) => (
+                <div
+                  key={b.id}
+                  className={`rounded-2xl border border-border bg-card p-5 text-center shadow-card ${
+                    b.earned ? "" : "opacity-40 grayscale"
+                  }`}
+                >
+                  <div className="text-4xl">{b.icon}</div>
+                  <div className="mt-2 font-extrabold">{b.label}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{b.earned ? "تم الحصول عليه ✅" : "مقفل 🔒"}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4">
+              <ActivityChart history={progress.history} />
+            </div>
           </section>
         )}
 
