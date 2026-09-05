@@ -113,7 +113,13 @@ function markDay(t: string) {
 export function recordAction(type: "listen" | "quiz") {
   if (typeof window === "undefined") return;
   const t = todayKey();
-  if (state.today.date !== t) state.today = { date: t, listens: 0, quiz: 0 };
+  if (state.today.date !== t) {
+    // first action of the day — remember the study time for tomorrow's reminder
+    const now = new Date();
+    const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    state.today = { date: t, listens: 0, quiz: 0 };
+    state.studyTime = hhmm;
+  }
   if (type === "listen") {
     state.today.listens += 1;
     state.totalListens += 1;
