@@ -12,7 +12,7 @@ import {
   LEVELS,
   reviewCard,
   dueCards,
-  useStreakFreeze,
+  consumeStreakFreeze,
   setDarkMode,
   historySeries,
   type SrsCard,
@@ -194,7 +194,7 @@ function ProgressPanel({ progress }: { progress: Progress }) {
         <button
           type="button"
           onClick={() => {
-            const ok = useStreakFreeze();
+            const ok = consumeStreakFreeze();
             setFreezeMsg(ok ? "🧊 تم إنقاذ سلسلتك ليوم أمس!" : "لا يمكن استعمال يوم الراحة الآن");
           }}
           className="mt-4 w-full rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold"
