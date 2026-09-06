@@ -666,6 +666,11 @@ function App() {
             <span>🔔</span>
             <span className="hidden md:inline">تذكير يومي</span>
           </button>
+          {pushMsg && (
+            <p className="hidden rounded-xl bg-card p-3 text-xs text-muted-foreground md:block">
+              {pushMsg}
+            </p>
+          )}
         </div>
       </aside>
 
