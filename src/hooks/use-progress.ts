@@ -140,6 +140,10 @@ export function recordAction(type: "listen" | "quiz") {
   markDay(t);
   state = { ...state };
   persist();
+  // sync study time to the push server (fire-and-forget)
+  void import("@/lib/push")
+    .then((m) => m.syncStudyTime())
+    .catch(() => {});
 }
 
 /** Spaced repetition — Leitner boxes (1..5), intervals in days */
