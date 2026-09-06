@@ -121,6 +121,7 @@ function markDay(t: string) {
 
 export function recordAction(type: "listen" | "quiz") {
   if (typeof window === "undefined") return;
+  ensureHydrated();
   const t = todayKey();
   if (state.today.date !== t) {
     // first action of the day — remember the study time for tomorrow's reminder
