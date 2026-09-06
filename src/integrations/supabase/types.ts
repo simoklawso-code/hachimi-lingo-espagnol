@@ -14,7 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          device_id: string
+          last_study_date: string | null
+          study_utc_time: string | null
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          last_study_date?: string | null
+          study_utc_time?: string | null
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          last_study_date?: string | null
+          study_utc_time?: string | null
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

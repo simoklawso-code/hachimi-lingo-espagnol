@@ -76,8 +76,17 @@ function empty(): ProgressState {
   };
 }
 
-let state: ProgressState = load();
+// Start empty so SSR HTML matches the client's first render (no hydration mismatch);
+// localStorage is loaded on first subscription / action, then listeners are notified.
+let state: ProgressState = empty();
+let hydrated = false;
 const listeners = new Set<() => void>();
+
+function ensureHydrated() {
+  if (hydrated || typeof window === "undefined") return;
+  hydrated = true;
+  state = load();
+}
 
 function load(): ProgressState {
   if (typeof window === "undefined") return empty();
