@@ -217,7 +217,10 @@ export function historySeries(history: Record<string, number>, n: number) {
 }
 
 function subscribe(cb: () => void) {
+  const wasHydrated = hydrated;
+  ensureHydrated();
   listeners.add(cb);
+  if (!wasHydrated) queueMicrotask(() => listeners.forEach((l) => l()));
   return () => listeners.delete(cb);
 }
 
