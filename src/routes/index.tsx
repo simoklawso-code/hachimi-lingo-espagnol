@@ -13,7 +13,6 @@ import {
   reviewCard,
   dueCards,
   consumeStreakFreeze,
-  markReminderShown,
   setDarkMode,
   historySeries,
   type SrsCard,
