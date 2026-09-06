@@ -76,8 +76,17 @@ function empty(): ProgressState {
   };
 }
 
-let state: ProgressState = load();
+// Start empty so SSR HTML matches the client's first render (no hydration mismatch);
+// localStorage is loaded on first subscription / action, then listeners are notified.
+let state: ProgressState = empty();
+let hydrated = false;
 const listeners = new Set<() => void>();
+
+function ensureHydrated() {
+  if (hydrated || typeof window === "undefined") return;
+  hydrated = true;
+  state = load();
+}
 
 function load(): ProgressState {
   if (typeof window === "undefined") return empty();
@@ -112,6 +121,7 @@ function markDay(t: string) {
 
 export function recordAction(type: "listen" | "quiz") {
   if (typeof window === "undefined") return;
+  ensureHydrated();
   const t = todayKey();
   if (state.today.date !== t) {
     // first action of the day — remember the study time for tomorrow's reminder
@@ -130,6 +140,10 @@ export function recordAction(type: "listen" | "quiz") {
   markDay(t);
   state = { ...state };
   persist();
+  // sync study time to the push server (fire-and-forget)
+  void import("@/lib/push")
+    .then((m) => m.syncStudyTime())
+    .catch(() => {});
 }
 
 /** Spaced repetition — Leitner boxes (1..5), intervals in days */
@@ -208,7 +222,10 @@ export function historySeries(history: Record<string, number>, n: number) {
 }
 
 function subscribe(cb: () => void) {
+  const wasHydrated = hydrated;
+  ensureHydrated();
   listeners.add(cb);
+  if (!wasHydrated) queueMicrotask(() => listeners.forEach((l) => l()));
   return () => listeners.delete(cb);
 }
 
