@@ -1,15 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const appId = import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_APP_ID as string | undefined;
-const vapidKey = import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_VAPID_KEY as
+const appId = import.meta.env["VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_APP_ID"] as
+  | string
+  | undefined;
+const vapidKey = import.meta.env["VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_VAPID_KEY"] as
   | string
   | undefined;
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_WEB_API_KEY as
+  apiKey: import.meta.env["VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_WEB_API_KEY"] as
     | string
     | undefined,
-  projectId: import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_PROJECT_ID as
+  projectId: import.meta.env["VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_PROJECT_ID"] as
     | string
     | undefined,
   appId,
@@ -35,7 +37,7 @@ function getDeviceId(): string {
 
 /** Convert today's local HH:MM to UTC HH:MM */
 function localToUtcHHMM(hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
+  const [h = 0, m = 0] = hhmm.split(":").map(Number);
   const d = new Date();
   d.setHours(h, m, 0, 0);
   return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
@@ -43,13 +45,8 @@ function localToUtcHHMM(hhmm: string): string {
 
 /** Call from a click handler: browsers ignore permission requests without a user gesture. */
 export async function enablePush(): Promise<PushResult> {
-  if (
-    !firebaseConfig.apiKey ||
-    !firebaseConfig.projectId ||
-    !appId ||
-    !vapidKey ||
-    !firebaseConfig.messagingSenderId
-  ) {
+  const { apiKey, projectId, messagingSenderId } = firebaseConfig;
+  if (!apiKey || !projectId || !appId || !vapidKey || !messagingSenderId) {
     return { status: "not-configured" };
   }
   const { getMessaging, getToken, isSupported } = await import("firebase/messaging");
@@ -67,13 +64,12 @@ export async function enablePush(): Promise<PushResult> {
     return { status: "denied" };
   }
 
-  const query = new URLSearchParams(
-    Object.fromEntries(Object.entries(firebaseConfig).map(([k, v]) => [k, String(v)])),
-  ).toString();
+  const config = { apiKey, projectId, appId, messagingSenderId };
+  const query = new URLSearchParams(config).toString();
   const serviceWorkerRegistration = await navigator.serviceWorker.register(
     `/firebase-messaging-sw.js?${query}`,
   );
-  const messaging = getMessaging(initializeApp(firebaseConfig));
+  const messaging = getMessaging(initializeApp(config));
   const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration });
   if (!token) return { status: "denied" };
 
@@ -97,7 +93,8 @@ export async function syncStudyTime(): Promise<void> {
         days?: string[];
       };
       studyTime = parsed.studyTime ?? null;
-      lastStudyDate = parsed.days?.length ? parsed.days[parsed.days.length - 1] : null;
+      const days = parsed.days ?? [];
+      lastStudyDate = days.length ? (days[days.length - 1] ?? null) : null;
     }
   } catch {
     /* ignore */
