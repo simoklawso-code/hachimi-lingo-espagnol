@@ -9,9 +9,18 @@ export const Route = createFileRoute("/api/public/hooks/push-reminders")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = request.headers.get("authorization");
-        const secret = process.env["CRON_SECRET"];
-        if (!secret || auth !== `Bearer ${secret}`) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Verify the scheduler: the secret lives in the DB (server-only table)
+        // so the pg_cron job can read it without exposing it anywhere.
+        const auth = request.headers.get("authorization") ?? "";
+        const token = auth.replace(/^Bearer\s+/i, "");
+        const { data: cfg } = await supabaseAdmin
+          .from("app_config")
+          .select("value")
+          .eq("key", "cron_secret")
+          .maybeSingle();
+        if (!cfg?.value || !token || token !== cfg.value) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
         }
 
@@ -25,7 +34,6 @@ export const Route = createFileRoute("/api/public/hooks/push-reminders")({
         const hhmm = `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`;
         const todayUtc = now.toISOString().slice(0, 10);
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: subs, error } = await supabaseAdmin
           .from("push_subscriptions")
           .select("device_id, token, last_study_date")
