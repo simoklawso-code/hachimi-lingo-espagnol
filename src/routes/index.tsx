@@ -4,7 +4,8 @@ import logoAsset from "@/assets/logo.png.asset.json";
 import heroAsset from "@/assets/hero.jpg.asset.json";
 import trophyAsset from "@/assets/trophy.png.asset.json";
 import { sections, phrases, numbers, icons, type Item } from "@/data/lingo";
-import { themes, verbs, stories } from "@/data/extra";
+import { themes, verbs, stories, type Story } from "@/data/extra";
+import { comprehensionFor } from "@/data/exercises";
 import {
   useProgress,
   DAILY_GOAL,
@@ -67,6 +68,8 @@ type Screen =
   | { kind: "story"; id: string }
   | { kind: "review" }
   | { kind: "speak" }
+  | { kind: "builder" }
+  | { kind: "listening"; id: string }
   | { kind: "badges" };
 
 function WordCard({ item, num }: { item: Item; num?: number }) {
@@ -480,6 +483,201 @@ function MatchQuiz({ all, onAnswer }: { all: Item[]; onAnswer: () => void }) {
   );
 }
 
+function SentenceBuilder({ all, onAnswer }: { all: Item[]; onAnswer: () => void }) {
+  const candidates = useMemo(() => all.filter((x) => x.es.split(" ").length >= 3 && x.es.split(" ").length <= 8), [all]);
+  const [target, setTarget] = useState<Item>(() => candidates[Math.floor(Math.random() * candidates.length)]!);
+  const correctWords = useMemo(() => target.es.replace(/[¿?¡!.,]/g, "").split(" "), [target]);
+  const [pool, setPool] = useState<string[]>(() => [...correctWords].sort(() => Math.random() - 0.5));
+  const [picked, setPicked] = useState<string[]>([]);
+  const [checked, setChecked] = useState<null | boolean>(null);
+
+  const next = () => {
+    const t = candidates[Math.floor(Math.random() * candidates.length)]!;
+    setTarget(t);
+    const words = t.es.replace(/[¿?¡!.,]/g, "").split(" ");
+    setPool([...words].sort(() => Math.random() - 0.5));
+    setPicked([]);
+    setChecked(null);
+  };
+
+  const pick = (word: string, i: number) => {
+    if (checked) return;
+    setPicked((p) => [...p, word]);
+    setPool((p) => p.filter((_, idx) => idx !== i));
+  };
+
+  const unpick = (i: number) => {
+    if (checked) return;
+    setPool((p) => [...p, picked[i]!]);
+    setPicked((p) => p.filter((_, idx) => idx !== i));
+  };
+
+  const check = () => {
+    const ok = picked.join(" ") === correctWords.join(" ");
+    setChecked(ok);
+    onAnswer();
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+      <p className="text-sm text-muted-foreground">رتب الكلمات لتكوين الجملة الصحيحة</p>
+      <div className="mt-2 font-bold">{target.ar}</div>
+      <button
+        type="button"
+        onClick={() => speakText(target.es)}
+        className="mt-2 grid h-9 w-9 place-items-center rounded-full bg-primary-soft text-primary"
+        aria-label="استمع إلى الجملة"
+      >
+        🔊
+      </button>
+
+      <div dir="ltr" className="mt-5 flex min-h-14 flex-wrap items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-3">
+        {picked.length === 0 && <span className="text-xs text-muted-foreground">اضغط على الكلمات تحت بالترتيب</span>}
+        {picked.map((w, i) => (
+          <button
+            key={`${w}-${i}`}
+            type="button"
+            onClick={() => unpick(i)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-bold ${
+              checked === null ? "bg-primary text-primary-foreground" : checked ? "bg-primary text-primary-foreground" : "bg-destructive text-destructive-foreground"
+            }`}
+          >
+            {w}
+          </button>
+        ))}
+      </div>
+
+      <div dir="ltr" className="mt-4 flex flex-wrap justify-center gap-2">
+        {pool.map((w, i) => (
+          <button
+            key={`${w}-${i}`}
+            type="button"
+            onClick={() => pick(w, i)}
+            className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-bold hover:bg-primary-soft"
+          >
+            {w}
+          </button>
+        ))}
+      </div>
+
+      {checked !== null && (
+        <p className="mt-4 font-bold" dir="ltr">
+          {checked ? "✅ صحيح!" : `❌ الصحيح: ${target.es}`}
+        </p>
+      )}
+
+      <div className="mt-5 flex justify-center gap-2">
+        {checked === null ? (
+          <button
+            type="button"
+            onClick={check}
+            disabled={picked.length !== correctWords.length}
+            className="rounded-xl bg-primary px-5 py-2 font-bold text-primary-foreground disabled:opacity-40"
+          >
+            تحقق ✓
+          </button>
+        ) : (
+          <button type="button" onClick={next} className="rounded-xl bg-primary px-5 py-2 font-bold text-primary-foreground">
+            جملة جديدة 🔄
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ListeningQuiz({ story, onAnswer }: { story: Story; onAnswer: () => void }) {
+  const questions = useMemo(() => comprehensionFor(story.id), [story.id]);
+  const [i, setI] = useState(0);
+  const [answer, setAnswer] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const q = questions[i]!;
+
+  const playAll = () => speakText(story.lines.map((l) => l.es).join(" "));
+
+  if (!questions.length) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+        <p className="text-sm text-muted-foreground">لا توجد أسئلة فهم لهذه القصة بعد.</p>
+      </div>
+    );
+  }
+
+  if (i >= questions.length) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-card">
+        <div className="text-5xl">🎧</div>
+        <p className="mt-3 font-extrabold">
+          النتيجة: {score}/{questions.length}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setI(0);
+            setScore(0);
+            setAnswer(null);
+          }}
+          className="mt-4 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground"
+        >
+          أعد المحاولة 🔄
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+      <button
+        type="button"
+        onClick={playAll}
+        className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary-soft text-3xl text-primary"
+        aria-label="استمع للقصة"
+      >
+        🔊
+      </button>
+      <p className="mt-2 text-xs text-muted-foreground">استمع ثم أجب — سؤال {i + 1}/{questions.length}</p>
+      <div className="mt-4 font-bold">{q.q}</div>
+      <div className="mt-4 grid gap-2">
+        {q.options.map((o, idx) => (
+          <button
+            key={o}
+            type="button"
+            onClick={() => {
+              if (answer !== null) return;
+              setAnswer(idx);
+              if (idx === q.correct) setScore((s) => s + 1);
+              onAnswer();
+            }}
+            className={`rounded-xl border border-border px-4 py-2 ${
+              answer === null
+                ? "bg-card hover:bg-primary-soft"
+                : idx === q.correct
+                  ? "bg-primary text-primary-foreground"
+                  : idx === answer
+                    ? "bg-destructive text-destructive-foreground"
+                    : "bg-card opacity-60"
+            }`}
+          >
+            {o}
+          </button>
+        ))}
+      </div>
+      {answer !== null && (
+        <button
+          type="button"
+          onClick={() => {
+            setI((n) => n + 1);
+            setAnswer(null);
+          }}
+          className="mt-5 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground"
+        >
+          {i + 1 < questions.length ? "السؤال التالي ←" : "شوف النتيجة 🏁"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ReviewScreen({ onAnswer }: { onAnswer: () => void }) {
   const [tick, setTick] = useState(0);
   const cards = useMemo(() => dueCards(), [tick]);
@@ -575,6 +773,7 @@ function App() {
     { label: "دروس مواضيعية", icon: "🧳", screen: { kind: "themes" } as Screen },
     { label: "قواعد سريعة", icon: "📐", screen: { kind: "grammar" } as Screen },
     { label: "قصص قصيرة", icon: "📖", screen: { kind: "stories" } as Screen },
+    { label: "بناء الجملة", icon: "🧩", screen: { kind: "builder" } as Screen },
     { label: "النطق", icon: "🎤", screen: { kind: "speak" } as Screen },
     { label: "المراجعة الذكية", icon: "🧠", screen: { kind: "review" } as Screen },
     { label: "اختبار", icon: "📝", screen: { kind: "quiz" } as Screen },
@@ -910,6 +1109,13 @@ function App() {
             >
               🔊 استمع للقصة كاملة
             </button>
+            <button
+              type="button"
+              onClick={() => go({ kind: "listening", id: screen.id })}
+              className="mb-4 mr-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold text-primary hover:bg-primary-soft"
+            >
+              🎧 اختبر فهمك
+            </button>
             <div className="grid gap-3">
               {(stories.find((x) => x.id === screen.id)?.lines ?? []).map((l) => (
                 <div key={l.es} className="rounded-2xl border border-border bg-card p-4 shadow-card">
@@ -939,6 +1145,26 @@ function App() {
                 <PronounceBox key={x.es} item={x} />
               ))}
             </div>
+          </section>
+        )}
+
+        {screen.kind === "builder" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle title="🧩 بناء الجملة" sub="رتب الكلمات المبعثرة لتكوين الجملة الصحيحة" />
+            <SentenceBuilder all={[...allItems, ...phrases]} onAnswer={progress.recordQuiz} />
+          </section>
+        )}
+
+        {screen.kind === "listening" && (
+          <section className="px-[5%] py-6">
+            <SectionTitle
+              title={`🎧 فهم الاستماع — ${stories.find((x) => x.id === screen.id)?.title ?? ""}`}
+              sub="استمع للقصة ثم أجب عن الأسئلة"
+            />
+            {(() => {
+              const st = stories.find((x) => x.id === screen.id);
+              return st ? <ListeningQuiz story={st} onAnswer={progress.recordQuiz} /> : null;
+            })()}
           </section>
         )}
 
