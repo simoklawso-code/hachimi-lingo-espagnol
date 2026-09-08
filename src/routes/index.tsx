@@ -709,29 +709,6 @@ function App() {
             </section>
 
             <section className="px-[5%] py-6">
-              <SectionTitle title="Aprende por Categorías" sub="تعلم حسب المواقف اليومية" />
-              <div className="flex flex-wrap justify-center gap-4">
-                {sections.map((s, i) => (
-                  <div
-                    key={s.title}
-                    className="flex w-full flex-col rounded-2xl border border-border bg-card p-5 shadow-card sm:w-[calc(50%_-_0.5rem)] xl:w-[calc(25%_-_0.75rem)]"
-                  >
-                    <div className="text-3xl">{icons[i]}</div>
-                    <h4 className="mt-2 font-extrabold">{s.title}</h4>
-                    <p className="mb-3 flex-1 text-xs text-muted-foreground">
-                      30 كلمة مختلفة مع ترجمة عربية ونطق وصوت.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => go({ kind: "lesson", index: i })}
-                      className="self-start rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90"
-                    >
-                      ابدأ ←
-                    </button>
-                  </div>
-                ))}
-              </div>
-
               <SectionTitle title="📊 تقدمي" sub="تقدم حقيقي يُحسب من نشاطك اليومي" />
               <ProgressPanel progress={progress} />
               <div className="mt-4">
