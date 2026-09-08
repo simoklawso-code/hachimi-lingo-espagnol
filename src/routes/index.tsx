@@ -714,7 +714,7 @@ function App() {
                 {sections.map((s, i) => (
                   <div
                     key={s.title}
-                    className="flex w-full flex-col rounded-2xl border border-border bg-card p-5 shadow-card sm:w-[calc(50%-0.5rem)] xl:w-[calc(25%-0.75rem)]"
+                    className="flex w-full flex-col rounded-2xl border border-border bg-card p-5 shadow-card sm:w-[calc(50%_-_0.5rem)] xl:w-[calc(25%_-_0.75rem)]"
                   >
                     <div className="text-3xl">{icons[i]}</div>
                     <h4 className="mt-2 font-extrabold">{s.title}</h4>
