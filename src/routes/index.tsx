@@ -710,11 +710,11 @@ function App() {
 
             <section className="px-[5%] py-6">
               <SectionTitle title="Aprende por Categorías" sub="تعلم حسب المواقف اليومية" />
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="flex flex-wrap justify-center gap-4">
                 {sections.map((s, i) => (
                   <div
                     key={s.title}
-                    className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-card"
+                    className="flex w-full flex-col rounded-2xl border border-border bg-card p-5 shadow-card sm:w-[calc(50%-0.5rem)] xl:w-[calc(25%-0.75rem)]"
                   >
                     <div className="text-3xl">{icons[i]}</div>
                     <h4 className="mt-2 font-extrabold">{s.title}</h4>
@@ -1048,4 +1048,3 @@ function pickPairs(all: Item[], n: number) {
   }
   return out;
 }
-
